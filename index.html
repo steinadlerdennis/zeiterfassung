@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#eef1f7">
+<title>Zeiterfassung</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-512.png">
+<link rel="icon" href="icon-512.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Zeiterfassung">
+<style>
+:root{
+  --text:#1c1c1e;--muted:rgba(60,60,67,.6);--line:rgba(60,60,67,.12);
+  --accent:#007aff;--green:#34c759;--red:#ff3b30;--orange:#ff9500;--purple:#af52de;--teal:#30b0c7;
+  --glass:rgba(255,255,255,.55);--glass-strong:rgba(255,255,255,.72);--glass-brd:rgba(255,255,255,.7);
+  --shine:inset 0 1px 0 rgba(255,255,255,.9), inset 0 -1px 0 rgba(255,255,255,.25);
+  --shadow:0 10px 40px rgba(31,38,64,.08), 0 1px 3px rgba(31,38,64,.06);
+  --fill:rgba(118,118,128,.12);
+  --bg1:#eef1f7;--blob1:#c9d8ff;--blob2:#ffd9ec;--blob3:#d5f5e6;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --text:#f2f2f7;--muted:rgba(235,235,245,.6);--line:rgba(84,84,88,.45);
+    --accent:#0a84ff;--green:#30d158;--red:#ff453a;--orange:#ff9f0a;--purple:#bf5af2;--teal:#40c8e0;
+    --glass:rgba(40,40,46,.5);--glass-strong:rgba(44,44,50,.72);--glass-brd:rgba(255,255,255,.12);
+    --shine:inset 0 1px 0 rgba(255,255,255,.14), inset 0 -1px 0 rgba(255,255,255,.04);
+    --shadow:0 10px 40px rgba(0,0,0,.4);
+    --fill:rgba(118,118,128,.24);
+    --bg1:#050507;--blob1:#1d2d6b;--blob2:#4a1d4f;--blob3:#123f35;
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg1)}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",Inter,"Segoe UI",system-ui,sans-serif;color:var(--text);font-size:16px;letter-spacing:-.01em;min-height:100vh;-webkit-font-smoothing:antialiased}
+.bg{position:fixed;inset:0;z-index:-1;overflow:hidden;background:var(--bg1)}
+.bg i{position:absolute;border-radius:50%;filter:blur(80px);opacity:.9}
+.bg i:nth-child(1){width:60vmax;height:60vmax;background:var(--blob1);top:-20vmax;left:-15vmax}
+.bg i:nth-child(2){width:50vmax;height:50vmax;background:var(--blob2);top:10vmax;right:-20vmax}
+.bg i:nth-child(3){width:55vmax;height:55vmax;background:var(--blob3);bottom:-25vmax;left:10vmax}
+.glass{background:var(--glass);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);border:.5px solid var(--glass-brd);box-shadow:var(--shine),var(--shadow)}
+.wrap{max-width:640px;margin:0 auto;padding:max(18px,env(safe-area-inset-top)) 16px 130px}
+header{padding:18px 4px 14px}
+h1{font-size:34px;margin:0;font-weight:700;letter-spacing:-.03em}
+.sync{font-size:13px;color:var(--muted);margin-top:2px;display:block}
+.card{border-radius:26px;padding:18px;margin-bottom:16px}
+.card,.stat.card{background:var(--glass);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);border:.5px solid var(--glass-brd);box-shadow:var(--shine),var(--shadow)}
+.clock{font-size:76px;font-weight:200;letter-spacing:-3px;text-align:center;font-variant-numeric:tabular-nums;line-height:1;margin-top:10px}
+.clock .sec{font-size:32px;color:var(--muted);letter-spacing:-1px;margin-left:2px}
+.date{text-align:center;color:var(--muted);margin:8px 0 18px;font-size:15px}
+.status{text-align:center;font-weight:500;margin:0 0 18px;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--muted)}
+.dot.on{background:var(--green);box-shadow:0 0 0 4px color-mix(in srgb,var(--green) 25%,transparent)}
+.big{display:block;width:100%;border:.5px solid rgba(255,255,255,.35);border-radius:999px;padding:17px;font:inherit;font-size:17px;font-weight:600;color:#fff;cursor:pointer;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45), inset 0 -8px 16px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.12);transition:transform .15s}
+.big:active{transform:scale(.98)}
+.big.in{background:linear-gradient(180deg,color-mix(in srgb,var(--green) 85%,#fff),var(--green))}
+.big.out{background:linear-gradient(180deg,color-mix(in srgb,var(--red) 85%,#fff),var(--red))}
+.big:disabled{background:var(--fill);color:var(--muted);box-shadow:none;border-color:transparent;cursor:default}
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+.stat{background:var(--fill);border-radius:18px;padding:12px 8px;text-align:center}
+.stat b{display:block;font-size:21px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.stat span{font-size:12px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px}
+.chip{border:0;background:var(--fill);color:var(--text);border-radius:999px;padding:8px 14px;font:inherit;font-size:14px;font-weight:500;cursor:pointer}
+.chip:active{opacity:.6}
+.btn{border:0;background:var(--fill);color:var(--accent);border-radius:999px;padding:8px 15px;font:inherit;font-size:15px;font-weight:600;cursor:pointer}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.danger{color:var(--red)}
+.btn.icon{width:34px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:20px;line-height:1}
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.monthnav{display:flex;align-items:center;gap:10px;font-weight:600;font-size:17px}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th{font-size:12px;color:var(--muted);font-weight:500;text-align:left;padding:4px 6px 8px;text-transform:uppercase;letter-spacing:.02em}
+td{padding:12px 6px;border-top:.5px solid var(--line);font-size:15px}
+tr.click{cursor:pointer} tr.click:active td{background:var(--fill)}
+.r{text-align:right}
+.plus{color:var(--green);font-weight:600} .minus{color:var(--red);font-weight:600} .zero{color:var(--muted)}
+.tag{font-size:12px;padding:3px 9px;border-radius:999px;font-weight:600;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)}
+.tag.schule{background:color-mix(in srgb,var(--teal) 16%,transparent);color:var(--teal)}
+.tag.urlaub{background:color-mix(in srgb,var(--orange) 16%,transparent);color:var(--orange)}
+.tag.krank{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
+.tag.feiertag{background:color-mix(in srgb,var(--purple) 14%,transparent);color:var(--purple)}
+.saldo{text-align:center;padding:22px 0}
+.saldo .val{font-size:56px;font-weight:200;letter-spacing:-2px;font-variant-numeric:tabular-nums;margin:4px 0}
+.grid4{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.grid4 .stat.card{border-radius:22px;padding:16px 10px}
+@media(max-width:600px){.hide-sm{display:none}.clock{font-size:66px}}
+.muted{color:var(--muted);font-size:13px}
+.empty{text-align:center;color:var(--muted);padding:28px 0}
+label{display:block;font-size:13px;color:var(--muted);margin:12px 4px 6px}
+input,select{width:100%;padding:12px 14px;border:0;border-radius:14px;background:var(--fill);color:var(--text);font:inherit;font-size:16px;appearance:none;-webkit-appearance:none}
+input:focus,select:focus{outline:2px solid color-mix(in srgb,var(--accent) 50%,transparent)}
+h2{font-size:20px;margin:0 0 10px;font-weight:700;letter-spacing:-.02em}
+.note{background:color-mix(in srgb,var(--orange) 14%,transparent);color:var(--orange);border-radius:16px;padding:11px 14px;font-size:13px;margin-bottom:14px;display:none}
+/* Tab-Leiste */
+.tabbar{position:fixed;left:50%;transform:translateX(-50%);bottom:max(14px,env(safe-area-inset-bottom));display:flex;gap:2px;padding:6px;border-radius:999px;z-index:5;
+  background:var(--glass-strong);-webkit-backdrop-filter:blur(30px) saturate(200%);backdrop-filter:blur(30px) saturate(200%);border:.5px solid var(--glass-brd);box-shadow:var(--shine),0 12px 40px rgba(0,0,0,.18)}
+.tabbar button{border:0;background:none;color:var(--text);font:inherit;font-size:11px;font-weight:500;padding:7px 16px 6px;border-radius:999px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:74px;transition:background .2s,color .2s}
+.tabbar button svg{width:24px;height:24px}
+.tabbar button.on{color:var(--accent);background:var(--fill)}
+/* Sheet */
+.dlg-bg{position:fixed;inset:0;background:rgba(0,0,0,.25);display:flex;align-items:flex-end;justify-content:center;z-index:10;opacity:0;pointer-events:none;transition:opacity .25s}
+.dlg-bg.show{opacity:1;pointer-events:auto}
+.dlg{width:100%;max-width:520px;border-radius:32px 32px 0 0;padding:10px 20px max(24px,env(safe-area-inset-bottom));transform:translateY(100%);transition:transform .35s cubic-bezier(.2,.9,.3,1);
+  background:var(--glass-strong);-webkit-backdrop-filter:blur(40px) saturate(200%);backdrop-filter:blur(40px) saturate(200%);border:.5px solid var(--glass-brd);box-shadow:var(--shine)}
+.dlg-bg.show .dlg{transform:none}
+@media(min-width:600px){.dlg-bg{align-items:center}.dlg{border-radius:32px;margin:16px}}
+.grab{width:38px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 12px}
+.dlg h3{margin:0 0 4px;font-size:20px;text-align:center}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dlg-actions{display:flex;justify-content:space-between;gap:8px;margin-top:22px}
+</style>
+</head>
+<body>
+<div class="bg"><i></i><i></i><i></i></div>
+<div class="wrap">
+  <header>
+    <h1 id="title">Heute</h1>
+    <span class="sync" id="sync">lädt …</span>
+  </header>
+  <div class="note" id="note"></div>
+  <main id="main"></main>
+</div>
+<nav class="tabbar"><button data-tab="heute" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Heute</button><button data-tab="archiv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Archiv</button><button data-tab="konto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20V12M12 20V5M19 20v-6"/></svg>Konto</button><button data-tab="einst"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Optionen</button></nav>
+
+<div class="dlg-bg" id="dlgBg">
+  <div class="dlg">
+    <div class="grab"></div>
+    <h3 id="dlgTitle">Tag bearbeiten</h3>
+    <label>Datum</label><input type="date" id="fDate">
+    <label>Art</label>
+    <select id="fTyp">
+      <option value="arbeit">Arbeit (Betrieb)</option>
+      <option value="schule">Berufsschule</option>
+      <option value="urlaub">Urlaub</option>
+      <option value="krank">Krank</option>
+      <option value="feiertag">Feiertag</option>
+    </select>
+    <div id="fTimes">
+      <div class="two">
+        <div><label>Kommen</label><input type="time" id="fIn"></div>
+        <div><label>Gehen</label><input type="time" id="fOut"></div>
+      </div>
+      <label>Pause (Minuten)</label><input type="number" id="fPause" min="0" step="5">
+    </div>
+    <label>Notiz (optional)</label><input type="text" id="fNote" maxlength="200">
+    <div class="dlg-actions">
+      <button class="btn danger" id="fDel">Löschen</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn" id="fCancel">Abbrechen</button>
+        <button class="btn primary" id="fSave">Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- Hilfsfunktionen ----------
+const WT = ["So","Mo","Di","Mi","Do","Fr","Sa"];
+const MON = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+const TYP = {arbeit:"Arbeit",schule:"Berufsschule",urlaub:"Urlaub",krank:"Krank",feiertag:"Feiertag"};
+const pad = n => String(n).padStart(2,"0");
+const todayKey = () => { const d=new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); };
+const nowHM = () => { const d=new Date(); return pad(d.getHours())+":"+pad(d.getMinutes()); };
+const toMin = hm => { if(!hm) return null; const [h,m]=hm.split(":").map(Number); return h*60+m; };
+const fmt = m => { m=Math.round(m); const s=m<0?"−":""; m=Math.abs(m); return s+Math.floor(m/60)+":"+pad(m%60); };
+const fmtDiff = m => { m=Math.round(m); if(m===0) return "±0:00"; return (m>0?"+":"−")+Math.floor(Math.abs(m)/60)+":"+pad(Math.abs(m)%60); };
+const cls = m => m>0?"plus":m<0?"minus":"zero";
+const dateObj = k => { const [y,mo,d]=k.split("-").map(Number); return new Date(y,mo-1,d); };
+const nice = k => { const d=dateObj(k); return WT[d.getDay()]+", "+pad(d.getDate())+"."+pad(d.getMonth()+1)+"."; };
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+// ---------- Daten ----------
+let S = { soll:480, pause:60, start:0 };   // Minuten
+let DAYS = {};
+let DELETED = {};                           // gelöschte Tage (für Abgleich)                              // "YYYY-MM-DD" -> Tag
+let col = null, mode = "none";
+let tab = "heute";
+let viewMonth = todayKey().slice(0,7);
+
+// Berechnung eines Tages: netto-Arbeitszeit und +/- gegenüber Soll
+function calc(day){
+  if(!day) return null;
+  if(day.typ && day.typ!=="arbeit") return {netto:S.soll, diff:0, open:false};
+  const a=toMin(day.kommen); if(a==null) return {netto:0,diff:0,open:false};
+  let b=toMin(day.gehen), open=false;
+  if(b==null){ open=true; b=toMin(nowHM()); }
+  const brutto=Math.max(0,b-a);
+  const pause = day.pause ?? S.pause;
+  const netto = Math.max(0, brutto - pause);
+  return {brutto, netto, diff: netto - S.soll, open, pause};
+}
+
+// ---------- Speicher (Claude-Datenbank, sonst Browser) ----------
+async function saveDay(day){
+  day.upd=Date.now(); DAYS[day.date]=day; render();
+  try{
+    if(col) await col.doc("d-"+day.date).set(day);
+    else saveLocal();
+  }catch(e){ showNote("Speichern hat nicht geklappt: "+(e.message||e.code)); }
+}
+async function deleteDay(date){
+  delete DAYS[date]; DELETED[date]=Date.now(); render();
+  try{ if(col) await col.doc("d-"+date).delete(); else saveLocal(); }catch(e){ showNote("Löschen hat nicht geklappt."); }
+}
+async function saveSettings(){
+  render();
+  try{ if(col) await col.doc("settings").set({...S}); else saveLocal(); }catch(e){ showNote("Einstellungen nicht gespeichert."); }
+}
+function saveLocal(){ try{ localStorage.setItem("zeit_v1", JSON.stringify({S,DAYS,DELETED})); }catch(e){} }
+function loadLocal(){ try{ const j=JSON.parse(localStorage.getItem("zeit_v1")||"null"); if(j){S={...S,...j.S};DAYS=j.DAYS||{};DELETED=j.DELETED||{};} }catch(e){} }
+function showNote(t){ const n=document.getElementById("note"); n.textContent=t; n.style.display=t?"block":"none"; }
+function setSync(t){ document.getElementById("sync").textContent=t; }
+
+function init(){
+  mode="local"; loadLocal(); setSync("Offline · gespeichert auf diesem Gerät");
+  try{ localStorage.setItem("zeit_test","1"); localStorage.removeItem("zeit_test"); }
+  catch(e){ showNote("Achtung: Dieser Browser kann nichts speichern. Öffne die Datei in Chrome oder Edge."); }
+  render();
+  if("serviceWorker" in navigator && location.protocol==="https:"){ navigator.serviceWorker.register("sw.js").catch(()=>{}); }
+}
+
+// ---------- Aktionen ----------
+function kommen(){
+  const k=todayKey();
+  saveDay({date:k, typ:"arbeit", kommen:nowHM(), gehen:null, pause:S.pause, notiz:DAYS[k]?.notiz||""});
+}
+function gehen(){
+  const k=todayKey(); const d=DAYS[k]; if(!d) return;
+  saveDay({...d, gehen:nowHM()});
+}
+function markToday(typ){
+  const k=todayKey();
+  saveDay({date:k, typ, kommen:null, gehen:null, pause:0, notiz:DAYS[k]?.notiz||""});
+}
+
+// ---------- Ansichten ----------
+function viewHeute(){
+  const k=todayKey(), d=DAYS[k], c=calc(d);
+  const now=new Date();
+  let status=`<span class="dot"></span>Noch nicht eingestempelt`, btn=`<button class="big in" onclick="kommen()">Kommen</button>`;
+  if(d && d.typ!=="arbeit"){
+    status=`Heute: <span class="tag ${d.typ}">${TYP[d.typ]}</span> – zählt als ${fmt(S.soll)} h`;
+    btn=`<button class="big in" onclick="kommen()">Trotzdem einstempeln</button>`;
+  } else if(d && d.kommen && !d.gehen){
+    status=`<span class="dot on"></span>Anwesend seit ${d.kommen} Uhr`;
+    btn=`<button class="big out" onclick="gehen()">Gehen</button>`;
+  } else if(d && d.gehen){
+    status=`Feierabend · ${d.kommen} bis ${d.gehen} Uhr`;
+    btn=`<button class="big in" disabled>Tag erledigt</button>`;
+  }
+  const soll=S.soll+S.pause;
+  let ende="–";
+  if(d && d.typ==="arbeit" && d.kommen){ const e=toMin(d.kommen)+S.soll+(d.pause??S.pause); ende=pad(Math.floor(e/60)%24)+":"+pad(e%60); }
+  return `
+  <div class="card">
+    <div class="clock" id="clock">${pad(now.getHours())}:${pad(now.getMinutes())}<span class="sec">${pad(now.getSeconds())}</span></div>
+    <div class="date">${WT[now.getDay()]}, ${now.getDate()}. ${MON[now.getMonth()]} ${now.getFullYear()}</div>
+    <div class="status">${status}</div>
+    ${btn}
+    <div class="row3">
+      <div class="stat"><b>${c?fmt(c.netto):"0:00"}</b><span>Arbeitszeit heute</span></div>
+      <div class="stat"><b class="${c?cls(c.diff):''}">${c&&(d.kommen||d.typ!=="arbeit")?fmtDiff(c.diff):"–"}</b><span>+/− heute</span></div>
+      <div class="stat"><b>${ende}</b><span>Feierabend ab</span></div>
+    </div>
+    <div class="muted" style="text-align:center;margin-top:10px">Pause wird automatisch abgezogen (${S.pause} Min.) · Soll ${fmt(S.soll)} h</div>
+    ${(!d || (!d.kommen && d.typ==="arbeit")) ? `
+    <div class="chips">
+      <span class="muted" style="width:100%;text-align:center">Heute nicht im Betrieb?</span>
+      <button class="chip" onclick="markToday('schule')">Berufsschule</button>
+      <button class="chip" onclick="markToday('urlaub')">Urlaub</button>
+      <button class="chip" onclick="markToday('krank')">Krank</button>
+      <button class="chip" onclick="markToday('feiertag')">Feiertag</button>
+    </div>`:`<div class="chips"><button class="chip" onclick="openEdit('${k}')">Bearbeiten</button></div>`}
+  </div>
+  ${weekCard()}`;
+}
+
+function weekCard(){
+  const now=new Date(); const dow=(now.getDay()+6)%7;
+  const mon=new Date(now); mon.setDate(now.getDate()-dow);
+  let rows="", sum=0, sd=0;
+  for(let i=0;i<5;i++){
+    const x=new Date(mon); x.setDate(mon.getDate()+i);
+    const k=x.getFullYear()+"-"+pad(x.getMonth()+1)+"-"+pad(x.getDate());
+    const d=DAYS[k], c=calc(d);
+    if(c){ sum+=c.netto; sd+=c.diff; }
+    rows+=`<tr class="click" onclick="openEdit('${k}')"><td>${nice(k)}</td>
+      <td>${d?(d.typ!=="arbeit"?`<span class="tag ${d.typ}">${TYP[d.typ]}</span>`:(d.kommen||"")+" – "+(d.gehen||"…")):'<span class="muted">–</span>'}</td>
+      <td class="r">${c?fmt(c.netto):""}</td><td class="r ${c?cls(c.diff):''}">${c?fmtDiff(c.diff):""}</td></tr>`;
+  }
+  return `<div class="card"><h2>Diese Woche</h2><table>
+    <tr><th>Tag</th><th>Zeit</th><th class="r">Netto</th><th class="r">+/−</th></tr>${rows}
+    <tr><td><b>Summe</b></td><td></td><td class="r"><b>${fmt(sum)}</b></td><td class="r ${cls(sd)}">${fmtDiff(sd)}</td></tr>
+  </table></div>`;
+}
+
+function monthDays(ym){ return Object.keys(DAYS).filter(k=>k.startsWith(ym)).sort(); }
+function shiftMonth(n){ const [y,m]=viewMonth.split("-").map(Number); const d=new Date(y,m-1+n,1); viewMonth=d.getFullYear()+"-"+pad(d.getMonth()+1); render(); }
+
+function viewArchiv(){
+  const [y,m]=viewMonth.split("-").map(Number);
+  const keys=monthDays(viewMonth).reverse();
+  let sum=0, sd=0;
+  const rows=keys.map(k=>{
+    const d=DAYS[k], c=calc(d); sum+=c.netto; sd+=c.diff;
+    const art = d.typ!=="arbeit" ? `<span class="tag ${d.typ}">${TYP[d.typ]}</span>` : "";
+    return `<tr class="click" onclick="openEdit('${k}')">
+      <td>${nice(k)}</td>
+      <td>${art||esc(d.kommen||"")}</td><td>${d.typ==="arbeit"?esc(d.gehen||"…"):""}</td>
+      <td class="r hide-sm">${d.typ==="arbeit"?(d.pause??S.pause)+"′":""}</td>
+      <td class="r">${fmt(c.netto)}</td><td class="r ${cls(c.diff)}">${fmtDiff(c.diff)}</td></tr>
+      ${d.notiz?`<tr><td colspan="6" class="muted" style="padding-top:0">${esc(d.notiz)}</td></tr>`:""}`;
+  }).join("");
+  return `<div class="card">
+    <div class="toolbar">
+      <div class="monthnav"><button class="btn icon" onclick="shiftMonth(-1)">‹</button>${MON[m-1]} ${y}<button class="btn icon" onclick="shiftMonth(1)">›</button></div>
+      <button class="btn primary" onclick="openEdit(null)">＋ Nachtragen</button>
+    </div>
+    ${keys.length?`<table>
+      <tr><th>Tag</th><th>Kommen</th><th>Gehen</th><th class="r hide-sm">Pause</th><th class="r">Netto</th><th class="r">+/−</th></tr>
+      ${rows}
+      <tr><td><b>Monat</b></td><td></td><td></td><td class="hide-sm"></td><td class="r"><b>${fmt(sum)}</b></td><td class="r ${cls(sd)}">${fmtDiff(sd)}</td></tr>
+    </table><div class="muted" style="margin-top:8px">Tipp: Auf einen Tag tippen zum Bearbeiten.</div>`
+    :`<div class="empty">Keine Einträge in diesem Monat.</div>`}
+  </div>`;
+}
+
+function viewKonto(){
+  const keys=Object.keys(DAYS).sort();
+  let saldo=S.start, work=0, cnt={arbeit:0,schule:0,urlaub:0,krank:0,feiertag:0};
+  const months={};
+  keys.forEach(k=>{
+    const d=DAYS[k], c=calc(d);
+    if(c.open) return;                 // laufender Tag zählt erst nach "Gehen"
+    if(d.typ==="arbeit" && !d.kommen) return;
+    saldo+=c.diff; cnt[d.typ||"arbeit"]++;
+    if(d.typ==="arbeit") work+=c.netto;
+    const ym=k.slice(0,7); months[ym]=months[ym]||{diff:0,net:0,tage:0};
+    months[ym].diff+=c.diff; months[ym].net+=c.netto; months[ym].tage++;
+  });
+  const avg = cnt.arbeit ? work/cnt.arbeit : 0;
+  const mrows=Object.keys(months).sort().reverse().map(ym=>{
+    const [y,m]=ym.split("-").map(Number), v=months[ym];
+    return `<tr class="click" onclick="viewMonth='${ym}';setTab('archiv')"><td>${MON[m-1]} ${y}</td><td class="r">${v.tage}</td><td class="r">${fmt(v.net)}</td><td class="r ${cls(v.diff)}">${fmtDiff(v.diff)}</td></tr>`;
+  }).join("");
+  // Liste aller Tage mit +/- (neueste zuerst)
+  const drows=keys.slice().reverse().filter(k=>{const c=calc(DAYS[k]);return !c.open && c.diff!==0;}).slice(0,40).map(k=>{
+    const c=calc(DAYS[k]); return `<tr class="click" onclick="openEdit('${k}')"><td>${nice(k)} ${k.slice(0,4)}</td><td class="r">${fmt(c.netto)}</td><td class="r ${cls(c.diff)}">${fmtDiff(c.diff)}</td></tr>`;
+  }).join("");
+  return `
+  <div class="card saldo">
+    <div class="muted">Dein Stundenkonto</div>
+    <div class="val ${cls(saldo)}">${fmtDiff(saldo)} h</div>
+    <div class="muted">${saldo>=0?"Überstunden":"Minusstunden"}${S.start?` (inkl. Startwert ${fmtDiff(S.start)})`:""}</div>
+  </div>
+  <div class="grid4" style="margin-bottom:14px">
+    <div class="stat card" style="margin:0"><b>${cnt.arbeit}</b><span>Tage anwesend</span></div>
+    <div class="stat card" style="margin:0"><b>${cnt.schule}</b><span>Berufsschule</span></div>
+    <div class="stat card" style="margin:0"><b>${cnt.urlaub}</b><span>Urlaub</span></div>
+    <div class="stat card" style="margin:0"><b>${cnt.krank}</b><span>Krank</span></div>
+    <div class="stat card" style="margin:0"><b>${fmt(work)}</b><span>h gearbeitet</span></div>
+    <div class="stat card" style="margin:0"><b>${fmt(avg)}</b><span>Ø pro Arbeitstag</span></div>
+    <div class="stat card" style="margin:0"><b>${cnt.feiertag}</b><span>Feiertage</span></div>
+    <div class="stat card" style="margin:0"><b>${keys.length}</b><span>Einträge gesamt</span></div>
+  </div>
+  <div class="card"><h2>Pro Monat</h2>
+    ${mrows?`<table><tr><th>Monat</th><th class="r">Tage</th><th class="r">Netto</th><th class="r">+/−</th></tr>${mrows}</table>`:`<div class="empty">Noch keine Daten.</div>`}
+  </div>
+  <div class="card"><h2>Plus- und Minus-Tage</h2>
+    ${drows?`<table><tr><th>Tag</th><th class="r">Netto</th><th class="r">+/−</th></tr>${drows}</table>`:`<div class="empty">Noch keine Abweichungen – alles genau auf Soll.</div>`}
+  </div>`;
+}
+
+function viewEinst(){
+  return `<div class="card">
+    <label>Soll-Arbeitszeit pro Tag (ohne Pause)</label>
+    <input type="time" id="sSoll" value="${pad(Math.floor(S.soll/60))}:${pad(S.soll%60)}">
+    <label>Automatische Pause (Minuten)</label>
+    <input type="number" id="sPause" min="0" step="5" value="${S.pause}">
+    <label>Startwert Stundenkonto (z. B. alte Überstunden, in Stunden, z. B. 2.5 oder -1)</label>
+    <input type="number" id="sStart" step="0.25" value="${(S.start/60)}">
+    <div style="margin-top:16px;display:flex;gap:8px;align-items:center">
+      <button class="btn primary" onclick="applySettings()">Speichern</button>
+      <span class="muted" id="sOk"></span>
+    </div>
+    <p class="muted" style="margin-top:18px">Berufsschule, Urlaub, Krank und Feiertag zählen als voller Soll-Tag (±0).</p>
+  </div>
+  <div class="card"><h2>Daten übertragen & sichern</h2>
+    <p class="muted" style="margin-top:0">Die App läuft komplett offline. Deine Daten liegen nur auf diesem Gerät. So bringst du sie aufs andere Gerät oder machst ein Backup:</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <button class="btn primary" onclick="exportData()">Sicherung speichern</button>
+      <button class="btn" onclick="document.getElementById('imp').click()">Sicherung laden</button>
+      <input type="file" id="imp" accept=".json,application/json" style="display:none" onchange="importData(this)">
+    </div>
+    <p class="muted" id="impMsg" style="margin-bottom:0"></p>
+    <p class="muted">Beim Laden wird zusammengeführt: Pro Tag gewinnt der neuere Eintrag. Es geht nichts verloren.</p>
+  </div>`;
+}
+function applySettings(){
+  const s=toMin(document.getElementById("sSoll").value); if(s!=null) S.soll=s;
+  S.pause=Math.max(0,parseInt(document.getElementById("sPause").value)||0);
+  S.start=Math.round((parseFloat(document.getElementById("sStart").value)||0)*60); S.upd=Date.now();
+  saveSettings(); setTimeout(()=>{const o=document.getElementById("sOk"); if(o) o.textContent="Gespeichert";},50);
+}
+
+// ---------- Sichern / Laden ----------
+function exportData(){
+  const blob=new Blob([JSON.stringify({app:"zeiterfassung",v:1,exportiert:new Date().toISOString(),S,DAYS,DELETED},null,1)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download="zeiterfassung-"+todayKey()+".json"; document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+  msg("Sicherung gespeichert (Ordner Downloads).");
+}
+function importData(inp){
+  const f=inp.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const j=JSON.parse(r.result); if(j.app!=="zeiterfassung") throw 0;
+      let neu=0;
+      const del={...DELETED,...(j.DELETED||{})};
+      for(const [k,d] of Object.entries(j.DAYS||{})){
+        if(del[k] && del[k]>(d.upd||0)) continue;
+        if(!DAYS[k] || (d.upd||0)>(DAYS[k].upd||0)){ DAYS[k]=d; neu++; }
+      }
+      for(const [k,t] of Object.entries(del)){ if(DAYS[k] && t>(DAYS[k].upd||0)) delete DAYS[k]; }
+      DELETED=del;
+      if(j.S && (j.S.upd||0)>(S.upd||0)) S={...S,...j.S};
+      saveLocal(); render(); msg(neu+" Tage übernommen.");
+    }catch(e){ msg("Das ist keine gültige Sicherungsdatei."); }
+    inp.value="";
+  };
+  r.readAsText(f);
+}
+function msg(t){ setTimeout(()=>{const m=document.getElementById("impMsg"); if(m) m.textContent=t;},30); }
+
+// ---------- Bearbeiten-Dialog ----------
+let editKey=null, delArm=false;
+function openEdit(k){
+  editKey=k; delArm=false;
+  const d = k ? (DAYS[k]||{date:k,typ:"arbeit",kommen:"",gehen:"",pause:S.pause}) : {date:todayKey(),typ:"arbeit",kommen:"",gehen:"",pause:S.pause};
+  document.getElementById("dlgTitle").textContent = k&&DAYS[k] ? "Tag bearbeiten" : "Tag nachtragen";
+  fDate.value=d.date; fTyp.value=d.typ||"arbeit"; fIn.value=d.kommen||""; fOut.value=d.gehen||"";
+  fPause.value=d.pause??S.pause; fNote.value=d.notiz||"";
+  fDel.style.visibility = k&&DAYS[k] ? "visible":"hidden"; fDel.textContent="Löschen";
+  toggleTimes(); dlgBg.classList.add("show");
+}
+function toggleTimes(){ fTimes.style.display = fTyp.value==="arbeit" ? "block":"none"; }
+fTyp.onchange=toggleTimes;
+fCancel.onclick=()=>dlgBg.classList.remove("show");
+dlgBg.onclick=e=>{ if(e.target===dlgBg) dlgBg.classList.remove("show"); };
+fSave.onclick=async()=>{
+  const date=fDate.value; if(!date) return;
+  const typ=fTyp.value;
+  const day={date, typ, kommen:typ==="arbeit"?(fIn.value||null):null, gehen:typ==="arbeit"?(fOut.value||null):null,
+    pause:typ==="arbeit"?Math.max(0,parseInt(fPause.value)||0):0, notiz:fNote.value.trim()};
+  if(typ==="arbeit" && !day.kommen){ fIn.focus(); return; }
+  dlgBg.classList.remove("show");
+  if(editKey && editKey!==date && DAYS[editKey]) await deleteDay(editKey);
+  saveDay(day);
+};
+fDel.onclick=()=>{
+  if(!delArm){ delArm=true; fDel.textContent="Wirklich löschen?"; return; }
+  dlgBg.classList.remove("show"); deleteDay(editKey);
+};
+
+// ---------- Rendern ----------
+const TITLES={heute:"Heute",archiv:"Archiv",konto:"Stundenkonto",einst:"Optionen"};
+function setTab(t){ tab=t; document.getElementById("title").textContent=TITLES[t]; window.scrollTo(0,0); document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.tab===t)); render(); }
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+function render(){
+  const v = tab==="heute"?viewHeute(): tab==="archiv"?viewArchiv(): tab==="konto"?viewKonto(): viewEinst();
+  document.getElementById("main").innerHTML=v;
+}
+// Uhr jede Sekunde, Heute-Ansicht jede Minute neu (nur Anzeige, kein Speichern)
+let lastMin=-1;
+setInterval(()=>{
+  const n=new Date(), el=document.getElementById("clock");
+  if(el) el.innerHTML=pad(n.getHours())+":"+pad(n.getMinutes())+'<span class="sec">'+pad(n.getSeconds())+'</span>';
+  if(n.getMinutes()!==lastMin){ lastMin=n.getMinutes(); if(tab==="heute") render(); }
+},1000);
+
+init();
+</script>
+</body>
+</html>
